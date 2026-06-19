@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+  geoserver:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      GEOSERVER_ADMIN_USER: ${GEOSERVER_ADMIN:-admin}
+      GEOSERVER_ADMIN_PASSWORD: ${GEOSERVER_PASS:-geoserver}
+      GEOSERVER_DATA_DIR: /opt/geoserver_data
+      INSTALL_EXTENSIONS: "false"
+      STABLE_EXTENSIONS: ""
+      COMMUNITY_EXTENSIONS: ""
+    ports:
+      - "${GEOSERVER_PORT:-8600}:8080"
+    volumes:
+      - geoserver_data:/opt/geoserver_data
+    restart: on-failure
+    networks:
+      - gov_network
+
+volumes:
+  geoserver_data:
+
+networks:
+  gov_network:
+    external: true
