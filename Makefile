@@ -102,10 +102,14 @@ config:
 	@echo "▶ [3/3] Layer-уудыг нийтэлж байна..."
 	@for layer in au1 au2 au3 v_acquisition_boundary v_acquisition_plan parcel v_parcel_acquisition; do \
 		echo "  → $$layer"; \
-		curl -sf $(GS_AUTH) -XPOST $(GS_URL)/workspaces/land/datastores/postgis_main/featuretypes \
+		curl -sf $(GS_AUTH) -XPOST "$(GS_URL)/workspaces/land/datastores/postgis_main/featuretypes?recalculate=nativebbox,latlonbbox" \
 			-H "Content-Type: application/json" \
-			-d "{\"featureType\":{\"name\":\"$$layer\",\"nativeName\":\"$$layer\",\"srs\":\"EPSG:4326\",\"recalculate\":\"nativebbox,latlonbbox\"}}" \
-			2>/dev/null || true; \
+			-d "{\"featureType\":{\"name\":\"$$layer\",\"nativeName\":\"$$layer\",\"srs\":\"EPSG:4326\",\"projectionPolicy\":\"FORCE_DECLARED\",\"enabled\":true}}" \
+			2>/dev/null || \
+		curl -sf $(GS_AUTH) -XPUT "$(GS_URL)/workspaces/land/datastores/postgis_main/featuretypes/$$layer.json?recalculate=nativebbox,latlonbbox" \
+			-H "Content-Type: application/json" \
+			-d "{\"featureType\":{\"name\":\"$$layer\",\"nativeName\":\"$$layer\",\"srs\":\"EPSG:4326\",\"projectionPolicy\":\"FORCE_DECLARED\",\"enabled\":true}}" \
+			>/dev/null; \
 	done
 	@echo ""
 	@echo "✓ GeoServer тохиргоо амжилттай дууслаа"
