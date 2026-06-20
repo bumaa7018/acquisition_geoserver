@@ -15,6 +15,8 @@ DB_USER := $(or $(DB_USER),postgres)
 DB_PASS ?= $(shell grep '^DB_PASSWORD' $(ENV_FILE) 2>/dev/null | cut -d= -f2)
 DB_NAME ?= $(shell grep '^DB_NAME'     $(ENV_FILE) 2>/dev/null | cut -d= -f2)
 DB_NAME := $(or $(DB_NAME),appdb)
+DB_HOST ?= $(shell grep '^DB_HOST'     $(ENV_FILE) 2>/dev/null | cut -d= -f2)
+DB_HOST := $(or $(DB_HOST),postgres)
 
 GS_URL  = http://localhost:$(GEOSERVER_PORT)/geoserver/rest
 GS_AUTH = -u $(GEOSERVER_ADMIN):$(GEOSERVER_PASS)
@@ -47,17 +49,35 @@ config:
 	@docker run --rm --network gov_network \
 		-e PGPASSWORD=$(DB_PASS) \
 		postgres:16-alpine psql \
-		-h postgres -U $(DB_USER) -d $(DB_NAME) \
-		-c "CREATE OR REPLACE VIEW v_acquisition_boundary AS \
+		-h $(DB_HOST) -U $(DB_USER) -d $(DB_NAME) \
+		-c "DROP VIEW IF EXISTS v_acquisition_boundary; \
+		    CREATE VIEW v_acquisition_boundary AS \
 		      SELECT id, plan_code, status, start_date, end_date, area_m2, geometry \
-		      FROM land_acquisition WHERE geometry IS NOT NULL" \
-		-c "CREATE OR REPLACE VIEW v_acquisition_plan AS \
+		      FROM ( \
+		        SELECT id, plan_code, status, start_date, end_date, area_m2, \
+		               ST_SetSRID(ST_GeomFromText(geometry), 4326)::geometry(Polygon, 4326) AS geometry \
+		        FROM land_acquisition \
+		        WHERE geometry IS NOT NULL AND trim(geometry) <> '' \
+		      ) s" \
+		-c "DROP VIEW IF EXISTS v_acquisition_plan; \
+		    CREATE VIEW v_acquisition_plan AS \
 		      SELECT id, plan_code, status, plan_area_m2, plan_geom AS geometry \
-		      FROM land_acquisition WHERE plan_geom IS NOT NULL" \
-		-c "CREATE OR REPLACE VIEW v_parcel_acquisition AS \
+		      FROM ( \
+		        SELECT id, plan_code, status, plan_area_m2, \
+		               ST_SetSRID(ST_GeomFromText(plan_geom), 4326)::geometry(Polygon, 4326) AS plan_geom \
+		        FROM land_acquisition \
+		        WHERE plan_geom IS NOT NULL AND trim(plan_geom) <> '' \
+		      ) s" \
+		-c "DROP VIEW IF EXISTS v_parcel_acquisition; \
+		    CREATE VIEW v_parcel_acquisition AS \
 		      SELECT id, parcel_id, acquisition_id, acquisition_area_m2, \
 		             acquisition_geom AS geometry \
-		      FROM parcel WHERE acquisition_geom IS NOT NULL"
+		      FROM ( \
+		        SELECT id, parcel_id, acquisition_id, acquisition_area_m2, \
+		               ST_SetSRID(ST_GeomFromText(acquisition_geom), 4326)::geometry(Polygon, 4326) AS acquisition_geom \
+		        FROM parcel \
+		        WHERE acquisition_geom IS NOT NULL AND trim(acquisition_geom) <> '' \
+		      ) s"
 	@echo "▶ [2/3] Workspace болон PostGIS DataStore тохируулж байна..."
 	@curl -sf $(GS_AUTH) -XPOST $(GS_URL)/workspaces \
 		-H "Content-Type: application/json" \
@@ -69,7 +89,7 @@ config:
 		      <type>PostGIS</type>\
 		      <enabled>true</enabled>\
 		      <connectionParameters>\
-		        <entry key="host">postgres</entry>\
+		        <entry key="host">$(DB_HOST)</entry>\
 		        <entry key="port">5432</entry>\
 		        <entry key="database">$(DB_NAME)</entry>\
 		        <entry key="user">$(DB_USER)</entry>\
