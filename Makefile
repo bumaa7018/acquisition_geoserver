@@ -70,39 +70,70 @@ config:
 		             p.acquisition_geom::geometry(Polygon, 4326) AS geometry \
 		      FROM parcel p \
 		      WHERE p.acquisition_geom IS NOT NULL" \
+		-c "DROP VIEW IF EXISTS v_parcel_s0; \
+		    CREATE VIEW v_parcel_s0 AS \
+		      SELECT p.id, p.parcel_id, p.acquisition_id, p.acquisition_area_m2, \
+		             p.status, \
+		             p.acquisition_geom::geometry(Polygon, 4326) AS geometry, \
+		             EXTRACT(YEAR FROM ( \
+		                 SELECT MAX(psh.status_date) FROM parcel_status_history psh \
+		                 WHERE psh.parcel_id = p.parcel_id \
+		             ))::INTEGER AS status_year \
+		      FROM parcel p \
+		      WHERE p.acquisition_geom IS NOT NULL AND p.status = 0" \
 		-c "DROP VIEW IF EXISTS v_parcel_s1; \
 		    CREATE VIEW v_parcel_s1 AS \
 		      SELECT p.id, p.parcel_id, p.acquisition_id, p.acquisition_area_m2, \
 		             p.status, \
-		             p.acquisition_geom::geometry(Polygon, 4326) AS geometry \
+		             p.acquisition_geom::geometry(Polygon, 4326) AS geometry, \
+		             EXTRACT(YEAR FROM ( \
+		                 SELECT MAX(psh.status_date) FROM parcel_status_history psh \
+		                 WHERE psh.parcel_id = p.parcel_id \
+		             ))::INTEGER AS status_year \
 		      FROM parcel p \
 		      WHERE p.acquisition_geom IS NOT NULL AND p.status = 1" \
 		-c "DROP VIEW IF EXISTS v_parcel_s2; \
 		    CREATE VIEW v_parcel_s2 AS \
 		      SELECT p.id, p.parcel_id, p.acquisition_id, p.acquisition_area_m2, \
 		             p.status, \
-		             p.acquisition_geom::geometry(Polygon, 4326) AS geometry \
+		             p.acquisition_geom::geometry(Polygon, 4326) AS geometry, \
+		             EXTRACT(YEAR FROM ( \
+		                 SELECT MAX(psh.status_date) FROM parcel_status_history psh \
+		                 WHERE psh.parcel_id = p.parcel_id \
+		             ))::INTEGER AS status_year \
 		      FROM parcel p \
 		      WHERE p.acquisition_geom IS NOT NULL AND p.status = 2" \
 		-c "DROP VIEW IF EXISTS v_parcel_s3; \
 		    CREATE VIEW v_parcel_s3 AS \
 		      SELECT p.id, p.parcel_id, p.acquisition_id, p.acquisition_area_m2, \
 		             p.status, \
-		             p.acquisition_geom::geometry(Polygon, 4326) AS geometry \
+		             p.acquisition_geom::geometry(Polygon, 4326) AS geometry, \
+		             EXTRACT(YEAR FROM ( \
+		                 SELECT MAX(psh.status_date) FROM parcel_status_history psh \
+		                 WHERE psh.parcel_id = p.parcel_id \
+		             ))::INTEGER AS status_year \
 		      FROM parcel p \
 		      WHERE p.acquisition_geom IS NOT NULL AND p.status = 3" \
 		-c "DROP VIEW IF EXISTS v_parcel_s4; \
 		    CREATE VIEW v_parcel_s4 AS \
 		      SELECT p.id, p.parcel_id, p.acquisition_id, p.acquisition_area_m2, \
 		             p.status, \
-		             p.acquisition_geom::geometry(Polygon, 4326) AS geometry \
+		             p.acquisition_geom::geometry(Polygon, 4326) AS geometry, \
+		             EXTRACT(YEAR FROM ( \
+		                 SELECT MAX(psh.status_date) FROM parcel_status_history psh \
+		                 WHERE psh.parcel_id = p.parcel_id \
+		             ))::INTEGER AS status_year \
 		      FROM parcel p \
 		      WHERE p.acquisition_geom IS NOT NULL AND p.status = 4" \
 		-c "DROP VIEW IF EXISTS v_parcel_s5; \
 		    CREATE VIEW v_parcel_s5 AS \
 		      SELECT p.id, p.parcel_id, p.acquisition_id, p.acquisition_area_m2, \
 		             p.status, \
-		             p.acquisition_geom::geometry(Polygon, 4326) AS geometry \
+		             p.acquisition_geom::geometry(Polygon, 4326) AS geometry, \
+		             EXTRACT(YEAR FROM ( \
+		                 SELECT MAX(psh.status_date) FROM parcel_status_history psh \
+		                 WHERE psh.parcel_id = p.parcel_id \
+		             ))::INTEGER AS status_year \
 		      FROM parcel p \
 		      WHERE p.acquisition_geom IS NOT NULL AND p.status = 5"
 	@echo "▶ [2/4] Workspace болон PostGIS DataStore тохируулж байна..."
@@ -149,7 +180,7 @@ config:
 			    </dataStore>' >/dev/null; \
 	fi
 	@echo "▶ [3/4] Layer-уудыг нийтэлж байна..."
-	@for layer in au1 au2 au3 v_acquisition_plan v_acquisition_boundary parcel building v_parcel_acquisition v_parcel_s1 v_parcel_s2 v_parcel_s3 v_parcel_s4 v_parcel_s5; do \
+	@for layer in au1 au2 au3 v_acquisition_plan v_acquisition_boundary parcel building v_parcel_acquisition v_parcel_s0 v_parcel_s1 v_parcel_s2 v_parcel_s3 v_parcel_s4 v_parcel_s5; do \
 		echo "  → $$layer"; \
 		if curl -sf $(GS_AUTH) "$(GS_URL)/workspaces/land/datastores/postgis_main/featuretypes/$$layer.json" >/dev/null; then \
 			curl -sf $(GS_AUTH) -XPUT "$(GS_URL)/workspaces/land/datastores/postgis_main/featuretypes/$$layer.json?recalculate=nativebbox,latlonbbox" \
@@ -170,6 +201,7 @@ config:
 		"parcel parcel_boundary parcel_boundary.sld" \
 		"building building_boundary building_boundary.sld" \
 		"v_parcel_acquisition parcel_acquisition parcel_acquisition.sld" \
+		"v_parcel_s0 parcel_s0 parcel_s0.sld" \
 		"v_parcel_s1 parcel_s1 parcel_s1.sld" \
 		"v_parcel_s2 parcel_s2 parcel_s2.sld" \
 		"v_parcel_s3 parcel_s3 parcel_s3.sld" \

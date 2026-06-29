@@ -6,19 +6,20 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://www.opengis.net/sld http://schemas.opengis.net/sld/1.0.0/StyledLayerDescriptor.xsd">
   <NamedLayer>
-    <Name>acquisition_plan</Name>
+    <Name>parcel_s0</Name>
     <UserStyle>
-      <Title>Төлөвлөгөөний хил</Title>
+      <Title>Нэгж талбар — Хүлээгдэж буй</Title>
       <FeatureTypeStyle>
         <Rule>
+          <Name>parcel_s0</Name>
           <PolygonSymbolizer>
             <Fill>
-              <CssParameter name="fill">#a855f7</CssParameter>
-              <CssParameter name="fill-opacity">0.08</CssParameter>
+              <CssParameter name="fill">#64748b</CssParameter>
+              <CssParameter name="fill-opacity">0.25</CssParameter>
             </Fill>
             <Stroke>
-              <CssParameter name="stroke">#a855f7</CssParameter>
-              <CssParameter name="stroke-width">2</CssParameter>
+              <CssParameter name="stroke">#64748b</CssParameter>
+              <CssParameter name="stroke-width">1.5</CssParameter>
             </Stroke>
           </PolygonSymbolizer>
         </Rule>

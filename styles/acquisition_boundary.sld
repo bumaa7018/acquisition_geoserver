@@ -13,11 +13,11 @@
         <Rule>
           <PolygonSymbolizer>
             <Fill>
-              <CssParameter name="fill">#f59e0b</CssParameter>
+              <CssParameter name="fill">#3b82f6</CssParameter>
               <CssParameter name="fill-opacity">0.10</CssParameter>
             </Fill>
             <Stroke>
-              <CssParameter name="stroke">#f59e0b</CssParameter>
+              <CssParameter name="stroke">#3b82f6</CssParameter>
               <CssParameter name="stroke-width">2.5</CssParameter>
             </Stroke>
           </PolygonSymbolizer>
