@@ -78,7 +78,10 @@ config:
 		             EXTRACT(YEAR FROM ( \
 		                 SELECT MAX(psh.status_date) FROM parcel_status_history psh \
 		                 WHERE psh.parcel_id = p.parcel_id \
-		             ))::INTEGER AS status_year \
+		             ))::INTEGER AS status_year, \
+		             COALESCE(',' || (SELECT string_agg(laa.user_id::text, ',') \
+		                 FROM land_acquisition_assignee laa \
+		                 WHERE laa.acquisition_id = p.acquisition_id) || ',', '') AS assignee_user_ids \
 		      FROM parcel p \
 		      WHERE p.acquisition_geom IS NOT NULL AND p.status = 0" \
 		-c "DROP VIEW IF EXISTS v_parcel_s1; \
@@ -89,7 +92,10 @@ config:
 		             EXTRACT(YEAR FROM ( \
 		                 SELECT MAX(psh.status_date) FROM parcel_status_history psh \
 		                 WHERE psh.parcel_id = p.parcel_id \
-		             ))::INTEGER AS status_year \
+		             ))::INTEGER AS status_year, \
+		             COALESCE(',' || (SELECT string_agg(laa.user_id::text, ',') \
+		                 FROM land_acquisition_assignee laa \
+		                 WHERE laa.acquisition_id = p.acquisition_id) || ',', '') AS assignee_user_ids \
 		      FROM parcel p \
 		      WHERE p.acquisition_geom IS NOT NULL AND p.status = 1" \
 		-c "DROP VIEW IF EXISTS v_parcel_s2; \
@@ -100,7 +106,10 @@ config:
 		             EXTRACT(YEAR FROM ( \
 		                 SELECT MAX(psh.status_date) FROM parcel_status_history psh \
 		                 WHERE psh.parcel_id = p.parcel_id \
-		             ))::INTEGER AS status_year \
+		             ))::INTEGER AS status_year, \
+		             COALESCE(',' || (SELECT string_agg(laa.user_id::text, ',') \
+		                 FROM land_acquisition_assignee laa \
+		                 WHERE laa.acquisition_id = p.acquisition_id) || ',', '') AS assignee_user_ids \
 		      FROM parcel p \
 		      WHERE p.acquisition_geom IS NOT NULL AND p.status = 2" \
 		-c "DROP VIEW IF EXISTS v_parcel_s3; \
@@ -111,7 +120,10 @@ config:
 		             EXTRACT(YEAR FROM ( \
 		                 SELECT MAX(psh.status_date) FROM parcel_status_history psh \
 		                 WHERE psh.parcel_id = p.parcel_id \
-		             ))::INTEGER AS status_year \
+		             ))::INTEGER AS status_year, \
+		             COALESCE(',' || (SELECT string_agg(laa.user_id::text, ',') \
+		                 FROM land_acquisition_assignee laa \
+		                 WHERE laa.acquisition_id = p.acquisition_id) || ',', '') AS assignee_user_ids \
 		      FROM parcel p \
 		      WHERE p.acquisition_geom IS NOT NULL AND p.status = 3" \
 		-c "DROP VIEW IF EXISTS v_parcel_s4; \
@@ -122,7 +134,10 @@ config:
 		             EXTRACT(YEAR FROM ( \
 		                 SELECT MAX(psh.status_date) FROM parcel_status_history psh \
 		                 WHERE psh.parcel_id = p.parcel_id \
-		             ))::INTEGER AS status_year \
+		             ))::INTEGER AS status_year, \
+		             COALESCE(',' || (SELECT string_agg(laa.user_id::text, ',') \
+		                 FROM land_acquisition_assignee laa \
+		                 WHERE laa.acquisition_id = p.acquisition_id) || ',', '') AS assignee_user_ids \
 		      FROM parcel p \
 		      WHERE p.acquisition_geom IS NOT NULL AND p.status = 4" \
 		-c "DROP VIEW IF EXISTS v_parcel_s5; \
@@ -133,7 +148,10 @@ config:
 		             EXTRACT(YEAR FROM ( \
 		                 SELECT MAX(psh.status_date) FROM parcel_status_history psh \
 		                 WHERE psh.parcel_id = p.parcel_id \
-		             ))::INTEGER AS status_year \
+		             ))::INTEGER AS status_year, \
+		             COALESCE(',' || (SELECT string_agg(laa.user_id::text, ',') \
+		                 FROM land_acquisition_assignee laa \
+		                 WHERE laa.acquisition_id = p.acquisition_id) || ',', '') AS assignee_user_ids \
 		      FROM parcel p \
 		      WHERE p.acquisition_geom IS NOT NULL AND p.status = 5"
 	@echo "▶ [2/4] Workspace болон PostGIS DataStore тохируулж байна..."
