@@ -36,10 +36,15 @@ services:
       #
       # Xmx: мөлхөх уншилтын үед татсан блокууд ЦӨМ нь санах ойд хуримтлагддаг
       # (DefaultCogImageInputStream.data — close() хүртэл цэвэрлэгддэггүй).
-      # Иймд COG биш зураг heap-д БҮТНЭЭРЭЭ орно: анхдагч 1g нь 500 MB-ийн
-      # хязгаартай зурагт хүрэлцэхгүй тул 3g болгов.
+      # Иймд COG биш зураг heap-д БҮТНЭЭРЭЭ орно — анхдагч 1g нь хүрэлцэхгүй.
+      #
+      # АНХААР: хэт томдуулж БОЛОХГҮЙ. Docker-ийн VM-д хуваарилагдсан RAM-аас
+      # GeoServer их авбал бусад нь (frontend-ийн `next build` г.м.) OOM-оор
+      # SIGKILL болдог — 3.8 GB VM дээр 3g тавихад тэр яг тохиолдсон. Дүрэм:
+      # хамгийн том COG биш зургийн хэмжээ + ~1g < GEOSERVER_HEAP.
+      GEOSERVER_HEAP: ${GEOSERVER_HEAP:-2g}
       EXTRA_JAVA_OPTS: >-
-        -Xms512m -Xmx3g
+        -Xms512m -Xmx${GEOSERVER_HEAP:-2g}
         -Dit.geosolutions.cog.default.header.length=8388608
       GEOSERVER_ADMIN_USER: ${GEOSERVER_ADMIN:-admin}
       GEOSERVER_ADMIN_PASSWORD: ${GEOSERVER_PASS:-geoserver}
