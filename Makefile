@@ -242,6 +242,8 @@ config:
 	done
 	@echo ""
 	@echo "✓ GeoServer тохиргоо амжилттай дууслаа"
+	@echo "  Дроны ортофотогийн давхаргыг API өөрөө үүсгэнэ (COG, MinIO-с шууд)"
 	@echo "  Web UI : http://localhost:$(GEOSERVER_PORT)/geoserver/web"
 	@echo "  WMS    : http://localhost:$(GEOSERVER_PORT)/geoserver/land/wms"
 	@echo "  Нэвтрэх: $(GEOSERVER_ADMIN) / $(GEOSERVER_PASS)"
+

@@ -1,22 +1,39 @@
 version: "3.9"
 
+# GeoServer (Java/log4j) бусад сервисээс арай илүү дэлгэрэнгүй лог бичдэг тул
+# арай өргөн (20MB × 5) хязгаар өгсөн — гэхдээ ямар ч тохиолдолд хязгааргүй биш.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
 services:
   geoserver:
     build:
       context: .
       dockerfile: Dockerfile
     environment:
+      TZ: Asia/Ulaanbaatar
       GEOSERVER_ADMIN_USER: ${GEOSERVER_ADMIN:-admin}
       GEOSERVER_ADMIN_PASSWORD: ${GEOSERVER_PASS:-geoserver}
       GEOSERVER_DATA_DIR: /opt/geoserver_data
+      # Татах ХЭРЭГГҮЙ: cog-http нь image дотор аль хэдийн байна
+      # (Dockerfile build үед /opt/additional_libs-д хийсэн). Startup дээр
+      # install-extensions.sh нь тэр zip-ийг зөвхөн unzip хийнэ.
       INSTALL_EXTENSIONS: "false"
-      STABLE_EXTENSIONS: ""
+      # COG — дроны ортофотог MinIO-с HTTP range-ээр шууд уншина
+      STABLE_EXTENSIONS: "cog-http"
       COMMUNITY_EXTENSIONS: ""
     ports:
       - "${GEOSERVER_PORT:-8600}:8080"
     volumes:
+      # Дроны ортофотог хуваалцсан хавтсаар БИШ, файлын системээс (MinIO)
+      # HTTP Range-ээр ШУУД уншина (COG). Иймд bind mount шаардлагагүй —
+      # GeoServer болон backend өөр сервер дээр ч байж болно.
       - geoserver_data:/opt/geoserver_data
     restart: on-failure
+    logging: *default-logging
     networks:
       - gov_network
 
