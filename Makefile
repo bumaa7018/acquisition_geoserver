@@ -214,6 +214,8 @@ config:
 	done
 	@echo "▶ [4/4] Layer style-уудыг frontend-тэй тааруулж байна..."
 	@for spec in \
+		"au2 au2_boundary au2_boundary.sld" \
+		"au3 au3_boundary au3_boundary.sld" \
 		"v_acquisition_plan acquisition_plan acquisition_plan.sld" \
 		"v_acquisition_boundary acquisition_boundary acquisition_boundary.sld" \
 		"parcel parcel_boundary parcel_boundary.sld" \

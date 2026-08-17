@@ -56,8 +56,14 @@ services:
       # COG — дроны ортофотог MinIO-с HTTP range-ээр шууд уншина
       STABLE_EXTENSIONS: "cog-http"
       COMMUNITY_EXTENSIONS: ""
+    # АЮУЛГҮЙ БАЙДАЛ: GeoServer-ийг зөвхөн localhost-д нийтэлнэ, 0.0.0.0-д БИШ.
+    # Өмнө нь host-д ил байхад хэн ч `http://<host>:8600/geoserver/...`-ээр
+    # WMS/WFS-ээр нэгж талбарын бодит geometry/атрибутыг нэвтрэлтгүй уншиж,
+    # админ давхаргуудыг жагсааж чаддаг байв. Frontend нь gov_network
+    # ДОТРООС (geoserver:8080) хандаж, эрх шалгасан `/api/geoserver` proxy-гоор
+    # дамждаг. Ops админ UI-д localhost/SSH tunnel-ээр хандана.
     ports:
-      - "${GEOSERVER_PORT:-8600}:8080"
+      - "127.0.0.1:${GEOSERVER_PORT:-8600}:8080"
     volumes:
       # Дроны ортофотог хуваалцсан хавтсаар БИШ, файлын системээс (MinIO)
       # HTTP Range-ээр ШУУД уншина (COG). Иймд bind mount шаардлагагүй —
