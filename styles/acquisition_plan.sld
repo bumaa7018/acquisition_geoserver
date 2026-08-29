@@ -11,14 +11,27 @@
       <Title>Төлөвлөгөөний хил</Title>
       <FeatureTypeStyle>
         <Rule>
+          <!-- 1) ДҮҮРГЭЛТ + ЦАГААН ДЭВСГЭР ХҮРЭЭ: хиймэл дагуулын зураг дээр
+                  улбар шар шууд тавихад бараан газарт уусдаг тул доор нь
+                  цайвар зузаан шугам тавьж хилийг тодруулна. -->
           <PolygonSymbolizer>
             <Fill>
-              <CssParameter name="fill">#a855f7</CssParameter>
-              <CssParameter name="fill-opacity">0.08</CssParameter>
+              <CssParameter name="fill">#ff7a00</CssParameter>
+              <CssParameter name="fill-opacity">0.10</CssParameter>
             </Fill>
             <Stroke>
-              <CssParameter name="stroke">#a855f7</CssParameter>
-              <CssParameter name="stroke-width">2</CssParameter>
+              <CssParameter name="stroke">#ffffff</CssParameter>
+              <CssParameter name="stroke-width">6</CssParameter>
+              <CssParameter name="stroke-opacity">0.75</CssParameter>
+              <CssParameter name="stroke-linejoin">round</CssParameter>
+            </Stroke>
+          </PolygonSymbolizer>
+          <!-- 2) ҮНДСЭН ХҮРЭЭ: улбар шар, өмнөхөөс 2 дахин зузаан (2 → 4) -->
+          <PolygonSymbolizer>
+            <Stroke>
+              <CssParameter name="stroke">#ff7a00</CssParameter>
+              <CssParameter name="stroke-width">4</CssParameter>
+              <CssParameter name="stroke-linejoin">round</CssParameter>
             </Stroke>
           </PolygonSymbolizer>
         </Rule>

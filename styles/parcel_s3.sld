@@ -14,11 +14,11 @@
           <Name>parcel_s3</Name>
           <PolygonSymbolizer>
             <Fill>
-              <CssParameter name="fill">#ec4899</CssParameter>
-              <CssParameter name="fill-opacity">0.25</CssParameter>
+              <CssParameter name="fill">#3b82f6</CssParameter>
+              <CssParameter name="fill-opacity">0.7</CssParameter>
             </Fill>
             <Stroke>
-              <CssParameter name="stroke">#ec4899</CssParameter>
+              <CssParameter name="stroke">#3b82f6</CssParameter>
               <CssParameter name="stroke-width">1.5</CssParameter>
             </Stroke>
           </PolygonSymbolizer>
