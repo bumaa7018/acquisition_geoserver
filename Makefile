@@ -252,6 +252,23 @@ config:
 			-H "Content-Type: application/json" \
 			-d "{\"layer\":{\"defaultStyle\":{\"name\":\"$$style\",\"workspace\":\"land\"}}}" >/dev/null; \
 	done
+	@echo "▶ [4/4b] ХЭВЛЭХИЙН дүүргэлтгүй style-уудыг ачаалж байна..."
+	@# Эдгээр нь давхаргын ӨГӨГДМӨЛ style БОЛОХГҮЙ — зөвхөн байршуулна.
+	@# Frontend хэвлэх мөчид WMS-ийн STYLES параметрээр нэрээр нь дуудна.
+	@for style in acquisition_plan_print plan_acquisition_print \
+		parcel_s0_print parcel_s1_print parcel_s2_print \
+		parcel_s3_print parcel_s4_print parcel_s5_print; do \
+		echo "  → $$style"; \
+		if curl -sf $(GS_AUTH) "$(GS_URL)/workspaces/land/styles/$$style.sld" >/dev/null; then \
+			curl -sf $(GS_AUTH) -XPUT "$(GS_URL)/workspaces/land/styles/$$style" \
+				-H "Content-Type: application/vnd.ogc.sld+xml" \
+				--data-binary "@$(STYLES_DIR)/$$style.sld" >/dev/null; \
+		else \
+			curl -sf $(GS_AUTH) -XPOST "$(GS_URL)/workspaces/land/styles?name=$$style" \
+				-H "Content-Type: application/vnd.ogc.sld+xml" \
+				--data-binary "@$(STYLES_DIR)/$$style.sld" >/dev/null; \
+		fi; \
+	done
 	@echo ""
 	@echo "✓ GeoServer тохиргоо амжилттай дууслаа"
 	@echo "  Дроны ортофотогийн давхаргыг API өөрөө үүсгэнэ (COG, MinIO-с шууд)"
