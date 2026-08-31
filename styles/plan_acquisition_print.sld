@@ -21,7 +21,7 @@
           <PolygonSymbolizer>
             <Stroke>
               <CssParameter name="stroke">#ffffff</CssParameter>
-              <CssParameter name="stroke-width">6</CssParameter>
+              <CssParameter name="stroke-width">12</CssParameter>
               <CssParameter name="stroke-opacity">0.75</CssParameter>
               <CssParameter name="stroke-linejoin">round</CssParameter>
             </Stroke>
@@ -31,7 +31,7 @@
           <PolygonSymbolizer>
             <Stroke>
               <CssParameter name="stroke">#6b3f1d</CssParameter>
-              <CssParameter name="stroke-width">4</CssParameter>
+              <CssParameter name="stroke-width">8</CssParameter>
               <CssParameter name="stroke-linejoin">round</CssParameter>
             </Stroke>
           </PolygonSymbolizer>

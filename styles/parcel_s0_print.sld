@@ -10,15 +10,21 @@
     <UserStyle>
       <Title>Нэгж талбар — Хүлээгдэж буй</Title>
       <FeatureTypeStyle>
-      <!-- ХЭВЛЭХЭД зориулсан хувилбар: ДҮҮРГЭЛТГҮЙ, зөвхөн хил.
-           Дэлгэцийн (default) style нь дүүргэлттэй хэвээр — энэ style-ыг
-           зөвхөн хэвлэх мөчид WMS-ийн STYLES параметрээр сольж дуудна. -->
+      <!-- ХЭВЛЭХЭД зориулсан хувилбар: дүүргэлт 30% (дэлгэц дээр 70%).
+           Цаасан дээр 70% дүүргэлт нь доорх хиймэл дагуулын зураг/дроны
+           ортофотог бүрэн халхалдаг тул сулруулсан. Дэлгэцийн (default)
+           style ХЭВЭЭР — энэ style-ыг зөвхөн хэвлэх мөчид WMS-ийн STYLES
+           параметрээр сольж дуудна. -->
         <Rule>
           <Name>parcel_s0</Name>
           <PolygonSymbolizer>
+            <Fill>
+              <CssParameter name="fill">#64748b</CssParameter>
+              <CssParameter name="fill-opacity">0.40</CssParameter>
+            </Fill>
             <Stroke>
               <CssParameter name="stroke">#64748b</CssParameter>
-              <CssParameter name="stroke-width">1.5</CssParameter>
+              <CssParameter name="stroke-width">4</CssParameter>
             </Stroke>
           </PolygonSymbolizer>
         </Rule>

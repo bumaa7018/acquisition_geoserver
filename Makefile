@@ -184,6 +184,7 @@ config:
 			        <entry key="dbtype">postgis</entry>\
 			        <entry key="schema">public</entry>\
 			        <entry key="validate connections">true</entry>\
+			        <entry key="Expose primary keys">true</entry>\
 			      </connectionParameters>\
 			    </dataStore>' >/dev/null; \
 	else \
@@ -202,6 +203,7 @@ config:
 			        <entry key="dbtype">postgis</entry>\
 			        <entry key="schema">public</entry>\
 			        <entry key="validate connections">true</entry>\
+			        <entry key="Expose primary keys">true</entry>\
 			      </connectionParameters>\
 			    </dataStore>' >/dev/null; \
 	fi
