@@ -222,6 +222,7 @@ config:
 	done
 	@echo "▶ [4/4] Layer style-уудыг frontend-тэй тааруулж байна..."
 	@for spec in \
+		"au1 au1_boundary au1_boundary.sld" \
 		"au2 au2_boundary au2_boundary.sld" \
 		"au3 au3_boundary au3_boundary.sld" \
 		"v_acquisition_plan acquisition_plan acquisition_plan.sld" \
@@ -257,4 +258,3 @@ config:
 	@echo "  Web UI : http://localhost:$(GEOSERVER_PORT)/geoserver/web"
 	@echo "  WMS    : http://localhost:$(GEOSERVER_PORT)/geoserver/land/wms"
 	@echo "  Нэвтрэх: $(GEOSERVER_ADMIN) / $(GEOSERVER_PASS)"
-
