@@ -63,6 +63,14 @@ config:
 		             plan_geom::geometry(Polygon, 4326) AS geometry \
 		      FROM land_acquisition \
 		      WHERE plan_geom IS NOT NULL" \
+		-c "DROP VIEW IF EXISTS v_plan_acquisition; \
+		    CREATE VIEW v_plan_acquisition AS \
+		      SELECT id AS acquisition_id, plan_code, \
+		             COALESCE(acquisition_name, '') AS acquisition_name, \
+		             status, area_m2, \
+		             geometry::geometry(Polygon, 4326) AS geometry \
+		      FROM land_acquisition \
+		      WHERE geometry IS NOT NULL AND deleted_at IS NULL" \
 		-c "DROP VIEW IF EXISTS v_parcel_acquisition; \
 		    CREATE VIEW v_parcel_acquisition AS \
 		      SELECT p.id, p.parcel_id, p.acquisition_id, p.acquisition_area_m2, \
@@ -198,7 +206,7 @@ config:
 			    </dataStore>' >/dev/null; \
 	fi
 	@echo "▶ [3/4] Layer-уудыг нийтэлж байна..."
-	@for layer in au1 au2 au3 v_acquisition_plan v_acquisition_boundary parcel building v_parcel_acquisition v_parcel_s0 v_parcel_s1 v_parcel_s2 v_parcel_s3 v_parcel_s4 v_parcel_s5; do \
+	@for layer in au1 au2 au3 v_acquisition_plan v_acquisition_boundary v_plan_acquisition parcel building v_parcel_acquisition v_parcel_s0 v_parcel_s1 v_parcel_s2 v_parcel_s3 v_parcel_s4 v_parcel_s5; do \
 		echo "  → $$layer"; \
 		if curl -sf $(GS_AUTH) "$(GS_URL)/workspaces/land/datastores/postgis_main/featuretypes/$$layer.json" >/dev/null; then \
 			curl -sf $(GS_AUTH) -XPUT "$(GS_URL)/workspaces/land/datastores/postgis_main/featuretypes/$$layer.json?recalculate=nativebbox,latlonbbox" \
@@ -218,6 +226,7 @@ config:
 		"au3 au3_boundary au3_boundary.sld" \
 		"v_acquisition_plan acquisition_plan acquisition_plan.sld" \
 		"v_acquisition_boundary acquisition_boundary acquisition_boundary.sld" \
+		"v_plan_acquisition plan_acquisition plan_acquisition.sld" \
 		"parcel parcel_boundary parcel_boundary.sld" \
 		"building building_boundary building_boundary.sld" \
 		"v_parcel_acquisition parcel_acquisition parcel_acquisition.sld" \
