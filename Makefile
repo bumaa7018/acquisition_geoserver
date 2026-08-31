@@ -168,6 +168,10 @@ config:
 			-H "Content-Type: application/json" \
 			-d '{"workspace":{"name":"land"}}' >/dev/null; \
 	fi
+# ЗААВАЛ "Expose primary keys": GeoServer нь PK баганыг үндсэн байдлаар НУУДАГ.
+# au1/au2/au3-ийн PK нь `code` тул үүнгүйгээр `CQL_FILTER=code IN (...)` нь
+# "Property 'code' could not be found" алдаа өгч, аймаг/сум/хорооны хил ОГТ
+# зурагддаггүй байв (frontend-ийн buildCodeCql үүнийг ашигладаг).
 	@if curl -sf $(GS_AUTH) "$(GS_URL)/workspaces/land/datastores/postgis_main.json" >/dev/null; then \
 		curl -sf $(GS_AUTH) -XPUT "$(GS_URL)/workspaces/land/datastores/postgis_main" \
 			-H "Content-Type: application/xml" \
@@ -258,6 +262,7 @@ config:
 	@# Эдгээр нь давхаргын ӨГӨГДМӨЛ style БОЛОХГҮЙ — зөвхөн байршуулна.
 	@# Frontend хэвлэх мөчид WMS-ийн STYLES параметрээр нэрээр нь дуудна.
 	@for style in acquisition_plan_print plan_acquisition_print \
+	              au1_boundary_print au2_boundary_print au3_boundary_print \
 		parcel_s0_print parcel_s1_print parcel_s2_print \
 		parcel_s3_print parcel_s4_print parcel_s5_print; do \
 		echo "  → $$style"; \
@@ -271,6 +276,10 @@ config:
 				--data-binary "@$(STYLES_DIR)/$$style.sld" >/dev/null; \
 		fi; \
 	done
+	@echo "▶ [5/5] Каталогийг дахин ачаалж байна..."
+	@# ЗААВАЛ: шинээр үүсгэсэн style-ыг WMS хөдөлгүүр ШУУД танихгүй —
+	@# reload хийхгүй бол GetMap "No such style: <нэр>" алдаа өгнө.
+	@curl -sf $(GS_AUTH) -XPOST "$(GS_URL)/reload" >/dev/null || true
 	@echo ""
 	@echo "✓ GeoServer тохиргоо амжилттай дууслаа"
 	@echo "  Дроны ортофотогийн давхаргыг API өөрөө үүсгэнэ (COG, MinIO-с шууд)"
