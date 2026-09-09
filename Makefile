@@ -18,6 +18,27 @@ DB_NAME := $(or $(DB_NAME),appdb)
 DB_HOST ?= $(shell grep '^DB_HOST'     $(ENV_FILE) 2>/dev/null | cut -d= -f2)
 DB_HOST := $(or $(DB_HOST),postgres)
 
+# ГУС-ийн (ЛМ) БҮРТГЭЛИЙН САН — зөвхөн УНШИХ.
+#
+# Дундын сервис (goverment-middleware) нь ЭНЭ л сан руу ханддаг: түүний
+# AUTH_DB_* тохиргоо нь `lm_0003` руу заадаг. GeoServer мөн ЯГ ТЭР эрхээр
+# (ижил хэрэглэгч) холбогдоно — өөр эрх үүсгэхгүй.
+#
+# АНХААР: энэ сан руу ЗӨВХӨН SELECT явна. GeoServer-ийн WFS-T (гүйлгээ) нь
+# proxy дээр хаалттай (зөвхөн GetMap/GetFeatureInfo/GetFeature), мөн доорх
+# датастор дээр бичих тохиргоо огт өгөгдөөгүй.
+GUS_DB_HOST ?= $(shell grep '^GUS_DB_HOST'     $(ENV_FILE) 2>/dev/null | cut -d= -f2)
+GUS_DB_PORT ?= $(shell grep '^GUS_DB_PORT'     $(ENV_FILE) 2>/dev/null | cut -d= -f2)
+GUS_DB_PORT := $(or $(GUS_DB_PORT),5432)
+GUS_DB_NAME ?= $(shell grep '^GUS_DB_NAME'     $(ENV_FILE) 2>/dev/null | cut -d= -f2)
+GUS_DB_USER ?= $(shell grep '^GUS_DB_USER'     $(ENV_FILE) 2>/dev/null | cut -d= -f2)
+GUS_DB_PASS ?= $(shell grep '^GUS_DB_PASSWORD' $(ENV_FILE) 2>/dev/null | cut -d= -f2)
+GUS_DB_SCHEMA ?= $(shell grep '^GUS_DB_SCHEMA' $(ENV_FILE) 2>/dev/null | cut -d= -f2)
+GUS_DB_SCHEMA := $(or $(GUS_DB_SCHEMA),data_landuse)
+
+# ГУС-аас шууд нийтлэгдэх давхаргууд (data_landuse схем).
+GUS_LAYERS = ca_agreed_parcel ca_sec_parcel
+
 GS_URL  = http://localhost:$(GEOSERVER_PORT)/geoserver/rest
 GS_AUTH = -u $(GEOSERVER_ADMIN):$(GEOSERVER_PASS)
 STYLES_DIR = $(GS_DIR)styles
@@ -53,13 +74,17 @@ config:
 		-h $(DB_HOST) -U $(DB_USER) -d $(DB_NAME) \
 		-c "DROP VIEW IF EXISTS v_acquisition_boundary; \
 		    CREATE VIEW v_acquisition_boundary AS \
-		      SELECT id AS acquisition_id, plan_code, status, start_date, end_date, area_m2, \
+		      SELECT id AS acquisition_id, plan_code, \
+		             COALESCE(acquisition_name, '') AS acquisition_name, \
+		             status, start_date, end_date, area_m2, \
 		             geometry::geometry(Polygon, 4326) AS geometry \
 		      FROM land_acquisition \
 		      WHERE geometry IS NOT NULL" \
 		-c "DROP VIEW IF EXISTS v_acquisition_plan; \
 		    CREATE VIEW v_acquisition_plan AS \
-		      SELECT id AS acquisition_id, plan_code, status, plan_area_m2, \
+		      SELECT id AS acquisition_id, plan_code, \
+		             COALESCE(acquisition_name, '') AS acquisition_name, \
+		             status, start_date, end_date, plan_area_m2, \
 		             plan_geom::geometry(Polygon, 4326) AS geometry \
 		      FROM land_acquisition \
 		      WHERE plan_geom IS NOT NULL" \
@@ -67,7 +92,7 @@ config:
 		    CREATE VIEW v_plan_acquisition AS \
 		      SELECT id AS acquisition_id, plan_code, \
 		             COALESCE(acquisition_name, '') AS acquisition_name, \
-		             status, area_m2, \
+		             status, start_date, end_date, area_m2, \
 		             geometry::geometry(Polygon, 4326) AS geometry \
 		      FROM land_acquisition \
 		      WHERE geometry IS NOT NULL AND deleted_at IS NULL" \
@@ -161,7 +186,24 @@ config:
 		                 FROM land_acquisition_assignee laa \
 		                 WHERE laa.acquisition_id = p.acquisition_id) || ',', '') AS assignee_user_ids \
 		      FROM parcel p \
-		      WHERE p.acquisition_geom IS NOT NULL AND p.status = 5"
+		      WHERE p.acquisition_geom IS NOT NULL AND p.status = 5" \
+		-c "DROP VIEW IF EXISTS v_parcel_public; \
+		    CREATE VIEW v_parcel_public AS \
+		      SELECT p.id, p.parcel_id, \
+		             p.au1_code, p.au2_code, p.au3_code, \
+		             COALESCE(a1.name, '') AS au1_name, \
+		             COALESCE(a2.name, '') AS au2_name, \
+		             COALESCE(a3.name, '') AS au3_name, \
+		             p.status, COALESCE(ps.name, '') AS status_name, \
+		             COALESCE(p.acquisition_area_m2, 0) AS acquisition_area_m2, \
+		             COALESCE(p.acquisition_geom, p.geometry)::geometry(Polygon, 4326) AS geometry \
+		      FROM parcel p \
+		      JOIN land_acquisition la ON la.id = p.acquisition_id AND la.deleted_at IS NULL \
+		      LEFT JOIN parcel_status ps ON ps.id = p.status \
+		      LEFT JOIN au1 a1 ON a1.code = p.au1_code \
+		      LEFT JOIN au2 a2 ON a2.code = p.au2_code \
+		      LEFT JOIN au3 a3 ON a3.code = p.au3_code \
+		      WHERE COALESCE(p.acquisition_geom, p.geometry) IS NOT NULL"
 	@echo "▶ [2/4] Workspace болон PostGIS DataStore тохируулж байна..."
 	@if ! curl -sf $(GS_AUTH) "$(GS_URL)/workspaces/land.json" >/dev/null; then \
 		curl -sf $(GS_AUTH) -XPOST $(GS_URL)/workspaces \
@@ -211,8 +253,9 @@ config:
 			      </connectionParameters>\
 			    </dataStore>' >/dev/null; \
 	fi
+	@$(MAKE) config-gus
 	@echo "▶ [3/4] Layer-уудыг нийтэлж байна..."
-	@for layer in au1 au2 au3 v_acquisition_plan v_acquisition_boundary v_plan_acquisition parcel building v_parcel_acquisition v_parcel_s0 v_parcel_s1 v_parcel_s2 v_parcel_s3 v_parcel_s4 v_parcel_s5; do \
+	@for layer in au1 au2 au3 v_acquisition_plan v_acquisition_boundary v_plan_acquisition parcel building v_parcel_acquisition v_parcel_s0 v_parcel_s1 v_parcel_s2 v_parcel_s3 v_parcel_s4 v_parcel_s5 v_parcel_public; do \
 		echo "  → $$layer"; \
 		if curl -sf $(GS_AUTH) "$(GS_URL)/workspaces/land/datastores/postgis_main/featuretypes/$$layer.json" >/dev/null; then \
 			curl -sf $(GS_AUTH) -XPUT "$(GS_URL)/workspaces/land/datastores/postgis_main/featuretypes/$$layer.json?recalculate=nativebbox,latlonbbox" \
@@ -242,7 +285,8 @@ config:
 		"v_parcel_s2 parcel_s2 parcel_s2.sld" \
 		"v_parcel_s3 parcel_s3 parcel_s3.sld" \
 		"v_parcel_s4 parcel_s4 parcel_s4.sld" \
-		"v_parcel_s5 parcel_s5 parcel_s5.sld"; do \
+		"v_parcel_s5 parcel_s5 parcel_s5.sld" \
+		"v_parcel_public parcel_public parcel_public.sld"; do \
 		set -- $$spec; layer=$$1; style=$$2; file=$$3; \
 		echo "  → $$layer = $$style"; \
 		if curl -sf $(GS_AUTH) "$(GS_URL)/workspaces/land/styles/$$style.sld" >/dev/null; then \
@@ -283,6 +327,82 @@ config:
 	@echo ""
 	@echo "✓ GeoServer тохиргоо амжилттай дууслаа"
 	@echo "  Дроны ортофотогийн давхаргыг API өөрөө үүсгэнэ (COG, MinIO-с шууд)"
+	@echo "  НЭЭЛТТЭЙ давхарга (гадны систем, эрх шалгахгүй): land:v_parcel_public"
+	@echo "    → frontend-ийн /api/public/geoserver/land/wms гарцаар (дүүргээр: CQL_FILTER=au2_code='\''...'\'')"
 	@echo "  Web UI : http://localhost:$(GEOSERVER_PORT)/geoserver/web"
 	@echo "  WMS    : http://localhost:$(GEOSERVER_PORT)/geoserver/land/wms"
 	@echo "  Нэвтрэх: $(GEOSERVER_ADMIN) / $(GEOSERVER_PASS)"
+
+# ГУС-ийн (ЛМ) давхаргууд — data_landuse схемээс ШУУД уншина.
+#
+#   ca_agreed_parcel — шинэ зөвшилцсөн зураг
+#   ca_sec_parcel    — хамгаалалтын зурвас
+#
+# Эдгээр нь appdb-д ХУУЛАГДАХГҮЙ: ГУС дээр өөрчлөгдөхөд газрын зураг дээр
+# шууд тусна (синхрончлолын алхам байхгүй).
+#
+# `config`-ийн дотроос дуудагдана. ГУС-ийн тохиргоо (GUS_DB_*) хоосон бол
+# ЧИМЭЭГҮЙ алгасана — локал орчинд ГУС руу холбогдох боломжгүй байдаг ба
+# үүнээс болж бүхэл `config` унах ёсгүй.
+.PHONY: config-gus
+config-gus:
+	@if [ -z "$(GUS_DB_HOST)" ] || [ -z "$(GUS_DB_NAME)" ] || [ -z "$(GUS_DB_USER)" ]; then \
+		echo "▶ [2b/4] ГУС давхарга: GUS_DB_* тохируулаагүй тул алгаслаа"; \
+		exit 0; \
+	fi; \
+	echo "▶ [2b/4] ГУС-ийн DataStore ($(GUS_DB_NAME)/$(GUS_DB_SCHEMA)) тохируулж байна..."; \
+	if curl -sf $(GS_AUTH) "$(GS_URL)/workspaces/land/datastores/postgis_gus.json" >/dev/null; then \
+		method=PUT; url="$(GS_URL)/workspaces/land/datastores/postgis_gus"; \
+	else \
+		method=POST; url="$(GS_URL)/workspaces/land/datastores"; \
+	fi; \
+	curl -sf $(GS_AUTH) -X$$method "$$url" \
+		-H "Content-Type: application/xml" \
+		-d '<dataStore>\
+		      <name>postgis_gus</name>\
+		      <type>PostGIS</type>\
+		      <enabled>true</enabled>\
+		      <connectionParameters>\
+		        <entry key="host">$(GUS_DB_HOST)</entry>\
+		        <entry key="port">$(GUS_DB_PORT)</entry>\
+		        <entry key="database">$(GUS_DB_NAME)</entry>\
+		        <entry key="user">$(GUS_DB_USER)</entry>\
+		        <entry key="passwd">$(GUS_DB_PASS)</entry>\
+		        <entry key="dbtype">postgis</entry>\
+		        <entry key="schema">$(GUS_DB_SCHEMA)</entry>\
+		        <entry key="validate connections">true</entry>\
+		        <entry key="Expose primary keys">true</entry>\
+		        <entry key="max connections">5</entry>\
+		        <entry key="Connection timeout">10</entry>\
+		      </connectionParameters>\
+		    </dataStore>' >/dev/null || \
+		{ echo "  ! ГУС-ийн DataStore үүсгэж чадсангүй — давхарга алгаслаа"; exit 0; }; \
+	for layer in $(GUS_LAYERS); do \
+		echo "  → $$layer"; \
+		if curl -sf $(GS_AUTH) "$(GS_URL)/workspaces/land/datastores/postgis_gus/featuretypes/$$layer.json" >/dev/null; then \
+			m=PUT; u="$(GS_URL)/workspaces/land/datastores/postgis_gus/featuretypes/$$layer.json?recalculate=nativebbox,latlonbbox"; \
+		else \
+			m=POST; u="$(GS_URL)/workspaces/land/datastores/postgis_gus/featuretypes?recalculate=nativebbox,latlonbbox"; \
+		fi; \
+		curl -sf $(GS_AUTH) -X$$m "$$u" \
+			-H "Content-Type: application/json" \
+			-d "{\"featureType\":{\"name\":\"$$layer\",\"nativeName\":\"$$layer\",\"srs\":\"EPSG:4326\",\"projectionPolicy\":\"REPROJECT_TO_DECLARED\",\"enabled\":true}}" \
+			>/dev/null || echo "  ! $$layer нийтлэгдсэнгүй (хүснэгт/геометр багана байхгүй байж болно)"; \
+	done; \
+	for spec in "ca_agreed_parcel ca_agreed_parcel ca_agreed_parcel.sld" \
+	            "ca_sec_parcel ca_sec_parcel ca_sec_parcel.sld"; do \
+		set -- $$spec; layer=$$1; style=$$2; file=$$3; \
+		echo "  → $$layer = $$style"; \
+		if curl -sf $(GS_AUTH) "$(GS_URL)/workspaces/land/styles/$$style.sld" >/dev/null; then \
+			curl -sf $(GS_AUTH) -XPUT "$(GS_URL)/workspaces/land/styles/$$style" \
+				-H "Content-Type: application/vnd.ogc.sld+xml" \
+				--data-binary "@$(STYLES_DIR)/$$file" >/dev/null; \
+		else \
+			curl -sf $(GS_AUTH) -XPOST "$(GS_URL)/workspaces/land/styles?name=$$style" \
+				-H "Content-Type: application/vnd.ogc.sld+xml" \
+				--data-binary "@$(STYLES_DIR)/$$file" >/dev/null; \
+		fi; \
+		curl -sf $(GS_AUTH) -XPUT "$(GS_URL)/layers/land:$$layer" \
+			-H "Content-Type: application/json" \
+			-d "{\"layer\":{\"defaultStyle\":{\"name\":\"$$style\",\"workspace\":\"land\"}}}" >/dev/null || true; \
+	done
