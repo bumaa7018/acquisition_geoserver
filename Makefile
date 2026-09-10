@@ -377,12 +377,16 @@ config-gus:
 		      </connectionParameters>\
 		    </dataStore>' >/dev/null || \
 		{ echo "  ! ГУС-ийн DataStore үүсгэж чадсангүй — давхарга алгаслаа"; exit 0; }; \
+	@# ЯАГААД `attributes` ч дахин тооцно: ГУС дээр харагдацдаа ШИНЭ багана
+	@# нэмэхэд GeoServer нь хуучин багануудынхаа жагсаалтыг сакалж үлддэг —
+	@# тэр багана WMS GetFeatureInfo-д ирэхгүй тул зураг дээр дарахад гарах
+	@# цонхонд ХООСОН харагддаг байв (жишээ: ca_sec_parcel-ийн `name`).
 	for layer in $(GUS_LAYERS); do \
 		echo "  → $$layer"; \
 		if curl -sf $(GS_AUTH) "$(GS_URL)/workspaces/land/datastores/postgis_gus/featuretypes/$$layer.json" >/dev/null; then \
-			m=PUT; u="$(GS_URL)/workspaces/land/datastores/postgis_gus/featuretypes/$$layer.json?recalculate=nativebbox,latlonbbox"; \
+			m=PUT; u="$(GS_URL)/workspaces/land/datastores/postgis_gus/featuretypes/$$layer.json?recalculate=nativebbox,latlonbbox,attributes"; \
 		else \
-			m=POST; u="$(GS_URL)/workspaces/land/datastores/postgis_gus/featuretypes?recalculate=nativebbox,latlonbbox"; \
+			m=POST; u="$(GS_URL)/workspaces/land/datastores/postgis_gus/featuretypes?recalculate=nativebbox,latlonbbox,attributes"; \
 		fi; \
 		curl -sf $(GS_AUTH) -X$$m "$$u" \
 			-H "Content-Type: application/json" \
