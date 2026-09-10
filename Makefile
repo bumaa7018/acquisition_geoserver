@@ -344,6 +344,16 @@ config:
 # `config`-ийн дотроос дуудагдана. ГУС-ийн тохиргоо (GUS_DB_*) хоосон бол
 # ЧИМЭЭГҮЙ алгасана — локал орчинд ГУС руу холбогдох боломжгүй байдаг ба
 # үүнээс болж бүхэл `config` унах ёсгүй.
+#
+# featuretypes-ийг нийтлэхэд recalculate-д "attributes" мөн орсон: ГУС дээр
+# харагдацдаа ШИНЭ багана нэмэхэд GeoServer нь хуучин багануудынхаа жагсаалтыг
+# сакалж үлддэг ба тэр багана WMS GetFeatureInfo-д ирэхгүй тул зураг дээр
+# дарахад гарах цонхонд хоосон харагддаг байв (жишээ: ca_sec_parcel-ийн name).
+#
+# АНХААР: доорх recipe нь "\"-аар холбогдсон ЕРДӨӨ НЭГ shell командын урсгал.
+# Тиймээс дунд нь тайлбар (@# ...) бичиж БОЛОХГҮЙ — shell тэрийг команд гэж
+# уншиж "@#: not found" гэж унана, тайлбар дахь backtick нь команд солилцоо
+# болж бас унана. Тайлбар зөвхөн ЭНД, target-ын гадна бичигдэнэ.
 .PHONY: config-gus
 config-gus:
 	@if [ -z "$(GUS_DB_HOST)" ] || [ -z "$(GUS_DB_NAME)" ] || [ -z "$(GUS_DB_USER)" ]; then \
@@ -377,10 +387,6 @@ config-gus:
 		      </connectionParameters>\
 		    </dataStore>' >/dev/null || \
 		{ echo "  ! ГУС-ийн DataStore үүсгэж чадсангүй — давхарга алгаслаа"; exit 0; }; \
-	@# ЯАГААД `attributes` ч дахин тооцно: ГУС дээр харагдацдаа ШИНЭ багана
-	@# нэмэхэд GeoServer нь хуучин багануудынхаа жагсаалтыг сакалж үлддэг —
-	@# тэр багана WMS GetFeatureInfo-д ирэхгүй тул зураг дээр дарахад гарах
-	@# цонхонд ХООСОН харагддаг байв (жишээ: ca_sec_parcel-ийн `name`).
 	for layer in $(GUS_LAYERS); do \
 		echo "  → $$layer"; \
 		if curl -sf $(GS_AUTH) "$(GS_URL)/workspaces/land/datastores/postgis_gus/featuretypes/$$layer.json" >/dev/null; then \
