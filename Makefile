@@ -187,6 +187,22 @@ config:
 		                 WHERE laa.acquisition_id = p.acquisition_id) || ',', '') AS assignee_user_ids \
 		      FROM parcel p \
 		      WHERE p.acquisition_geom IS NOT NULL AND p.status = 5" \
+		-c "DROP VIEW IF EXISTS v_parcel_status; \
+		    CREATE VIEW v_parcel_status AS \
+		      SELECT p.id, p.parcel_id, p.acquisition_id, p.acquisition_area_m2, \
+		             p.status, \
+		             COALESCE(ps.color, '#94a3b8') AS color, \
+		             p.acquisition_geom::geometry(Polygon, 4326) AS geometry, \
+		             EXTRACT(YEAR FROM ( \
+		                 SELECT MAX(psh.status_date) FROM parcel_status_history psh \
+		                 WHERE psh.parcel_id = p.parcel_id \
+		             ))::INTEGER AS status_year, \
+		             COALESCE(',' || (SELECT string_agg(laa.user_id::text, ',') \
+		                 FROM land_acquisition_assignee laa \
+		                 WHERE laa.acquisition_id = p.acquisition_id) || ',', '') AS assignee_user_ids \
+		      FROM parcel p \
+		      LEFT JOIN parcel_status ps ON ps.id = p.status \
+		      WHERE p.acquisition_geom IS NOT NULL" \
 		-c "DROP VIEW IF EXISTS v_parcel_public; \
 		    CREATE VIEW v_parcel_public AS \
 		      SELECT p.id, p.parcel_id, \
@@ -255,7 +271,7 @@ config:
 	fi
 	@$(MAKE) config-gus
 	@echo "▶ [3/4] Layer-уудыг нийтэлж байна..."
-	@for layer in au1 au2 au3 v_acquisition_plan v_acquisition_boundary v_plan_acquisition parcel building v_parcel_acquisition v_parcel_s0 v_parcel_s1 v_parcel_s2 v_parcel_s3 v_parcel_s4 v_parcel_s5 v_parcel_public; do \
+	@for layer in au1 au2 au3 v_acquisition_plan v_acquisition_boundary v_plan_acquisition parcel building v_parcel_acquisition v_parcel_status v_parcel_s0 v_parcel_s1 v_parcel_s2 v_parcel_s3 v_parcel_s4 v_parcel_s5 v_parcel_public; do \
 		echo "  → $$layer"; \
 		if curl -sf $(GS_AUTH) "$(GS_URL)/workspaces/land/datastores/postgis_main/featuretypes/$$layer.json" >/dev/null; then \
 			curl -sf $(GS_AUTH) -XPUT "$(GS_URL)/workspaces/land/datastores/postgis_main/featuretypes/$$layer.json?recalculate=nativebbox,latlonbbox" \
@@ -280,6 +296,7 @@ config:
 		"parcel parcel_boundary parcel_boundary.sld" \
 		"building building_boundary building_boundary.sld" \
 		"v_parcel_acquisition parcel_acquisition parcel_acquisition.sld" \
+		"v_parcel_status parcel_status parcel_status.sld" \
 		"v_parcel_s0 parcel_s0 parcel_s0.sld" \
 		"v_parcel_s1 parcel_s1 parcel_s1.sld" \
 		"v_parcel_s2 parcel_s2 parcel_s2.sld" \
@@ -307,6 +324,7 @@ config:
 	@# Frontend хэвлэх мөчид WMS-ийн STYLES параметрээр нэрээр нь дуудна.
 	@for style in acquisition_plan_print plan_acquisition_print \
 	              au1_boundary_print au2_boundary_print au3_boundary_print \
+		parcel_status_print \
 		parcel_s0_print parcel_s1_print parcel_s2_print \
 		parcel_s3_print parcel_s4_print parcel_s5_print; do \
 		echo "  → $$style"; \
