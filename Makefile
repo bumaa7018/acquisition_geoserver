@@ -103,90 +103,6 @@ config:
 		             p.acquisition_geom::geometry(Polygon, 4326) AS geometry \
 		      FROM parcel p \
 		      WHERE p.acquisition_geom IS NOT NULL" \
-		-c "DROP VIEW IF EXISTS v_parcel_s0; \
-		    CREATE VIEW v_parcel_s0 AS \
-		      SELECT p.id, p.parcel_id, p.acquisition_id, p.acquisition_area_m2, \
-		             p.status, \
-		             p.acquisition_geom::geometry(Polygon, 4326) AS geometry, \
-		             EXTRACT(YEAR FROM ( \
-		                 SELECT MAX(psh.status_date) FROM parcel_status_history psh \
-		                 WHERE psh.parcel_id = p.parcel_id \
-		             ))::INTEGER AS status_year, \
-		             COALESCE(',' || (SELECT string_agg(laa.user_id::text, ',') \
-		                 FROM land_acquisition_assignee laa \
-		                 WHERE laa.acquisition_id = p.acquisition_id) || ',', '') AS assignee_user_ids \
-		      FROM parcel p \
-		      WHERE p.acquisition_geom IS NOT NULL AND p.status = 0" \
-		-c "DROP VIEW IF EXISTS v_parcel_s1; \
-		    CREATE VIEW v_parcel_s1 AS \
-		      SELECT p.id, p.parcel_id, p.acquisition_id, p.acquisition_area_m2, \
-		             p.status, \
-		             p.acquisition_geom::geometry(Polygon, 4326) AS geometry, \
-		             EXTRACT(YEAR FROM ( \
-		                 SELECT MAX(psh.status_date) FROM parcel_status_history psh \
-		                 WHERE psh.parcel_id = p.parcel_id \
-		             ))::INTEGER AS status_year, \
-		             COALESCE(',' || (SELECT string_agg(laa.user_id::text, ',') \
-		                 FROM land_acquisition_assignee laa \
-		                 WHERE laa.acquisition_id = p.acquisition_id) || ',', '') AS assignee_user_ids \
-		      FROM parcel p \
-		      WHERE p.acquisition_geom IS NOT NULL AND p.status = 1" \
-		-c "DROP VIEW IF EXISTS v_parcel_s2; \
-		    CREATE VIEW v_parcel_s2 AS \
-		      SELECT p.id, p.parcel_id, p.acquisition_id, p.acquisition_area_m2, \
-		             p.status, \
-		             p.acquisition_geom::geometry(Polygon, 4326) AS geometry, \
-		             EXTRACT(YEAR FROM ( \
-		                 SELECT MAX(psh.status_date) FROM parcel_status_history psh \
-		                 WHERE psh.parcel_id = p.parcel_id \
-		             ))::INTEGER AS status_year, \
-		             COALESCE(',' || (SELECT string_agg(laa.user_id::text, ',') \
-		                 FROM land_acquisition_assignee laa \
-		                 WHERE laa.acquisition_id = p.acquisition_id) || ',', '') AS assignee_user_ids \
-		      FROM parcel p \
-		      WHERE p.acquisition_geom IS NOT NULL AND p.status = 2" \
-		-c "DROP VIEW IF EXISTS v_parcel_s3; \
-		    CREATE VIEW v_parcel_s3 AS \
-		      SELECT p.id, p.parcel_id, p.acquisition_id, p.acquisition_area_m2, \
-		             p.status, \
-		             p.acquisition_geom::geometry(Polygon, 4326) AS geometry, \
-		             EXTRACT(YEAR FROM ( \
-		                 SELECT MAX(psh.status_date) FROM parcel_status_history psh \
-		                 WHERE psh.parcel_id = p.parcel_id \
-		             ))::INTEGER AS status_year, \
-		             COALESCE(',' || (SELECT string_agg(laa.user_id::text, ',') \
-		                 FROM land_acquisition_assignee laa \
-		                 WHERE laa.acquisition_id = p.acquisition_id) || ',', '') AS assignee_user_ids \
-		      FROM parcel p \
-		      WHERE p.acquisition_geom IS NOT NULL AND p.status = 3" \
-		-c "DROP VIEW IF EXISTS v_parcel_s4; \
-		    CREATE VIEW v_parcel_s4 AS \
-		      SELECT p.id, p.parcel_id, p.acquisition_id, p.acquisition_area_m2, \
-		             p.status, \
-		             p.acquisition_geom::geometry(Polygon, 4326) AS geometry, \
-		             EXTRACT(YEAR FROM ( \
-		                 SELECT MAX(psh.status_date) FROM parcel_status_history psh \
-		                 WHERE psh.parcel_id = p.parcel_id \
-		             ))::INTEGER AS status_year, \
-		             COALESCE(',' || (SELECT string_agg(laa.user_id::text, ',') \
-		                 FROM land_acquisition_assignee laa \
-		                 WHERE laa.acquisition_id = p.acquisition_id) || ',', '') AS assignee_user_ids \
-		      FROM parcel p \
-		      WHERE p.acquisition_geom IS NOT NULL AND p.status = 4" \
-		-c "DROP VIEW IF EXISTS v_parcel_s5; \
-		    CREATE VIEW v_parcel_s5 AS \
-		      SELECT p.id, p.parcel_id, p.acquisition_id, p.acquisition_area_m2, \
-		             p.status, \
-		             p.acquisition_geom::geometry(Polygon, 4326) AS geometry, \
-		             EXTRACT(YEAR FROM ( \
-		                 SELECT MAX(psh.status_date) FROM parcel_status_history psh \
-		                 WHERE psh.parcel_id = p.parcel_id \
-		             ))::INTEGER AS status_year, \
-		             COALESCE(',' || (SELECT string_agg(laa.user_id::text, ',') \
-		                 FROM land_acquisition_assignee laa \
-		                 WHERE laa.acquisition_id = p.acquisition_id) || ',', '') AS assignee_user_ids \
-		      FROM parcel p \
-		      WHERE p.acquisition_geom IS NOT NULL AND p.status = 5" \
 		-c "DROP VIEW IF EXISTS v_parcel_status; \
 		    CREATE VIEW v_parcel_status AS \
 		      SELECT p.id, p.parcel_id, p.acquisition_id, p.acquisition_area_m2, \
@@ -270,8 +186,17 @@ config:
 			    </dataStore>' >/dev/null; \
 	fi
 	@$(MAKE) config-gus
+	@echo "▶ [3a/4] Хуучин төлөв тус бүрийн давхаргыг (v_parcel_s0..s5) каталогоос хасаж байна..."
+	@# «Нэг төлөв = нэг давхарга» загварын үлдэгдэл — v_parcel_status нэг давхарга
+	@# бүх төлөвийг өнгөөр нь харуулна. View-ийг backend-ийн migration 000054 устгана.
+	@for n in 0 1 2 3 4 5; do \
+		curl -sf $(GS_AUTH) -XDELETE "$(GS_URL)/workspaces/land/datastores/postgis_main/featuretypes/v_parcel_s$$n?recurse=true" >/dev/null || true; \
+		for style in parcel_s$$n parcel_s$${n}_print; do \
+			curl -sf $(GS_AUTH) -XDELETE "$(GS_URL)/workspaces/land/styles/$$style?purge=true" >/dev/null || true; \
+		done; \
+	done
 	@echo "▶ [3/4] Layer-уудыг нийтэлж байна..."
-	@for layer in au1 au2 au3 v_acquisition_plan v_acquisition_boundary v_plan_acquisition parcel building v_parcel_acquisition v_parcel_status v_parcel_s0 v_parcel_s1 v_parcel_s2 v_parcel_s3 v_parcel_s4 v_parcel_s5 v_parcel_public; do \
+	@for layer in au1 au2 au3 v_acquisition_plan v_acquisition_boundary v_plan_acquisition parcel building v_parcel_acquisition v_parcel_status v_parcel_public; do \
 		echo "  → $$layer"; \
 		if curl -sf $(GS_AUTH) "$(GS_URL)/workspaces/land/datastores/postgis_main/featuretypes/$$layer.json" >/dev/null; then \
 			curl -sf $(GS_AUTH) -XPUT "$(GS_URL)/workspaces/land/datastores/postgis_main/featuretypes/$$layer.json?recalculate=nativebbox,latlonbbox" \
@@ -297,12 +222,6 @@ config:
 		"building building_boundary building_boundary.sld" \
 		"v_parcel_acquisition parcel_acquisition parcel_acquisition.sld" \
 		"v_parcel_status parcel_status parcel_status.sld" \
-		"v_parcel_s0 parcel_s0 parcel_s0.sld" \
-		"v_parcel_s1 parcel_s1 parcel_s1.sld" \
-		"v_parcel_s2 parcel_s2 parcel_s2.sld" \
-		"v_parcel_s3 parcel_s3 parcel_s3.sld" \
-		"v_parcel_s4 parcel_s4 parcel_s4.sld" \
-		"v_parcel_s5 parcel_s5 parcel_s5.sld" \
 		"v_parcel_public parcel_public parcel_public.sld"; do \
 		set -- $$spec; layer=$$1; style=$$2; file=$$3; \
 		echo "  → $$layer = $$style"; \
@@ -324,9 +243,7 @@ config:
 	@# Frontend хэвлэх мөчид WMS-ийн STYLES параметрээр нэрээр нь дуудна.
 	@for style in acquisition_plan_print plan_acquisition_print \
 	              au1_boundary_print au2_boundary_print au3_boundary_print \
-		parcel_status_print \
-		parcel_s0_print parcel_s1_print parcel_s2_print \
-		parcel_s3_print parcel_s4_print parcel_s5_print; do \
+		parcel_status_print; do \
 		echo "  → $$style"; \
 		if curl -sf $(GS_AUTH) "$(GS_URL)/workspaces/land/styles/$$style.sld" >/dev/null; then \
 			curl -sf $(GS_AUTH) -XPUT "$(GS_URL)/workspaces/land/styles/$$style" \
