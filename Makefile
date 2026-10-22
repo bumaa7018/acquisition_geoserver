@@ -196,7 +196,7 @@ config:
 		done; \
 	done
 	@echo "▶ [3/4] Layer-уудыг нийтэлж байна..."
-	@for layer in au1 au2 au3 v_acquisition_plan v_acquisition_boundary v_plan_acquisition parcel building v_parcel_acquisition v_parcel_status v_parcel_public; do \
+	@for layer in au1 au2 au3 v_acquisition_plan v_acquisition_boundary v_plan_acquisition parcel building v_parcel_acquisition v_parcel_public; do \
 		echo "  → $$layer"; \
 		if curl -sf $(GS_AUTH) "$(GS_URL)/workspaces/land/datastores/postgis_main/featuretypes/$$layer.json" >/dev/null; then \
 			curl -sf $(GS_AUTH) -XPUT "$(GS_URL)/workspaces/land/datastores/postgis_main/featuretypes/$$layer.json?recalculate=nativebbox,latlonbbox" \
@@ -210,6 +210,14 @@ config:
 				>/dev/null; \
 		fi; \
 	done
+	@echo "▶ [3b/4] v_parcel_status — сараар (VIEWPARAMS=month:YYYY-MM) дуудах SQL view..."
+	@# Тодорхойлолт нь layers/v_parcel_status.xml-д (SQL-д «<» байгаа тул энд биш).
+	@# Энгийн давхаргаас SQL view руу PUT-оор шилжихгүй тул устгаад дахин үүсгэнэ;
+	@# style-ийг доорх [4/4] дахин ононо.
+	@curl -sf $(GS_AUTH) -XDELETE "$(GS_URL)/workspaces/land/datastores/postgis_main/featuretypes/v_parcel_status?recurse=true" >/dev/null || true
+	@curl -sf $(GS_AUTH) -XPOST "$(GS_URL)/workspaces/land/datastores/postgis_main/featuretypes?recalculate=nativebbox,latlonbbox" \
+		-H "Content-Type: application/xml" \
+		--data-binary "@$(GS_DIR)layers/v_parcel_status.xml" >/dev/null
 	@echo "▶ [4/4] Layer style-уудыг frontend-тэй тааруулж байна..."
 	@for spec in \
 		"au1 au1_boundary au1_boundary.sld" \

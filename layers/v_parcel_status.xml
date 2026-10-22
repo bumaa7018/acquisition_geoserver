@@ -1,0 +1,80 @@
+<!--
+  land:v_parcel_status — нэгж талбарын төлөв (өнгө нь parcel_status.color).
+
+  SQL VIEW (параметртэй): дашбоардын цагийн голоор сар сонгоход давхарга
+  тухайн САРЫН БАЙДЛААР зурагдана — «Он цагийн зураг»-ийн өгөгдөлтэй
+  (backend repository/postgres/chronos.go GetChronos + frontend statusAt) ЯГ ИЖИЛ:
+    • нэгж талбар/чөлөөлөлт устгагдаагүй (deleted_at IS NULL);
+    • геометр = нэгж талбарын БҮТЭН хил (p.geometry), хоосон бол зурагдахгүй;
+    • төлөв = тухайн сар хүртэл (Улаанбаатарын цагаар, ЗӨВХӨН он-сараар)
+      parcel_status_history-д бүртгэгдсэн ХАМГИЙН СҮҮЛИЙН төлөв;
+    • тэр сар хүртэл төлөвгүй (түүх эхлээгүй) нэгж талбар status = -1,
+      өнгө #6B7480 — «Он цагийн зураг»-ийн «Чөлөөлөгдөөгүй (түүх эхлээгүй)»
+      (frontend: NOT_STARTED_STATUS_ID / CHRONOS_NOT_STARTED).
+
+  Хэрэглээ: VIEWPARAMS=month:2025-06
+  Параметргүй (month=current) бол ӨМНӨХТЭЙ ЯГ ИЖИЛ — одоогийн parcel.status,
+  нөлөөлөлд өртсөн хэсэг (acquisition_geom), -1 гарахгүй; тиймээс хэвлэх,
+  чөлөөлөлтийн газрын зураг өөрчлөлтгүй ажиллана.
+
+  month-ийг regexp-ээр шалгадаг тул SQL-д шууд орох нь аюулгүй.
+  Баганууд нь хуучин DB view (v_parcel_status)-тэй ИЖИЛ: frontend-ийн
+  status=N, status_year, assignee_user_ids шүүлтүүд хэвээр ажиллана.
+-->
+<featureType>
+  <name>v_parcel_status</name>
+  <nativeName>v_parcel_status</nativeName>
+  <title>v_parcel_status</title>
+  <srs>EPSG:4326</srs>
+  <projectionPolicy>FORCE_DECLARED</projectionPolicy>
+  <enabled>true</enabled>
+  <metadata>
+    <entry key="JDBC_VIRTUAL_TABLE">
+      <virtualTable>
+        <name>v_parcel_status</name>
+        <sql>SELECT p.id, p.parcel_id, p.acquisition_id, p.acquisition_area_m2,
+       st.status,
+       CASE WHEN st.status = -1 THEN '#6B7480' ELSE COALESCE(ps.color, '#94a3b8') END AS color,
+       (CASE WHEN '%month%' = 'current' THEN p.acquisition_geom ELSE p.geometry END)::geometry(Polygon, 4326) AS geometry,
+       EXTRACT(YEAR FROM (
+           SELECT MAX(psh.status_date) FROM parcel_status_history psh
+            WHERE psh.parcel_id = p.parcel_id
+       ))::INTEGER AS status_year,
+       COALESCE(',' || (SELECT string_agg(laa.user_id::text, ',')
+                          FROM land_acquisition_assignee laa
+                         WHERE laa.acquisition_id = p.acquisition_id) || ',', '') AS assignee_user_ids
+  FROM parcel p
+  CROSS JOIN LATERAL (
+        SELECT p.status AS status WHERE '%month%' = 'current'
+        UNION ALL
+        SELECT COALESCE((
+                 SELECT h.status_id
+                   FROM parcel_status_history h
+                  WHERE h.parcel_id = p.parcel_id
+                    AND h.acquisition_id = p.acquisition_id
+                    AND h.status_date &lt; ((to_date(NULLIF('%month%', 'current'), 'YYYY-MM') + interval '1 month')::timestamp
+                                          AT TIME ZONE 'Asia/Ulaanbaatar')
+                  ORDER BY h.status_date DESC, h.id DESC
+                  LIMIT 1), -1)
+         WHERE '%month%' &lt;&gt; 'current'
+  ) st
+  LEFT JOIN parcel_status ps ON ps.id = st.status
+ WHERE ('%month%' = 'current' AND p.acquisition_geom IS NOT NULL)
+    OR ('%month%' &lt;&gt; 'current' AND p.geometry IS NOT NULL AND p.deleted_at IS NULL
+        AND EXISTS (SELECT 1 FROM land_acquisition la WHERE la.id = p.acquisition_id AND la.deleted_at IS NULL))</sql>
+        <escapeSql>false</escapeSql>
+        <keyColumn>id</keyColumn>
+        <geometry>
+          <name>geometry</name>
+          <type>Polygon</type>
+          <srid>4326</srid>
+        </geometry>
+        <parameter>
+          <name>month</name>
+          <defaultValue>current</defaultValue>
+          <regexpValidator>^(current|[0-9]{4}-(0[1-9]|1[0-2]))$</regexpValidator>
+        </parameter>
+      </virtualTable>
+    </entry>
+  </metadata>
+</featureType>
